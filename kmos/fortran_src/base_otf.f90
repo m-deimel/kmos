@@ -622,10 +622,9 @@ subroutine scale_reactions
     if (proc_pair_indices(i).gt.0.) then
         if (pair_is_loc_eq(pair_index)) then
             scaling_factors(pair_index) = min(buffer_parameter*2*escape_rate &
-            /(integ_rates_sb(i)+integ_rates_sb(r_proc)),1.)
+                 /(integ_rates_sb(i)+integ_rates_sb(r_proc)),1.)
+            ! TODO: do we really need this?
             last_set_scaling_factors(pair_index) = scaling_factors(pair_index)
-            rates(i) = original_rates(i)*scaling_factors(pair_index)
-            rates(r_proc) = original_rates(r_proc)*scaling_factors(pair_index)
             !For debugging
             if (debug > 2) then
                 print *,"BASE/SCALE_REACTIONS/ESCAPE_RATE:", escape_rate
@@ -642,8 +641,6 @@ subroutine scale_reactions
         else
             if (scaling_factors(pair_index).ne.1) then
                 scaling_factors(pair_index) = 1
-                rates(i) = original_rates(i)
-                rates(r_proc) = original_rates(r_proc)
             endif
         endif
     endif
@@ -676,8 +673,6 @@ subroutine unscale_reactions
             print *,""
         endif
         scaling_factors(pair_index) = 1
-        rates(i) = original_rates(i)
-        rates(r_proc) = original_rates(r_proc)
         proc_pair_exec_sb(pair_index) = 0
         pair_is_loc_eq(pair_index) = .false.
     endif
