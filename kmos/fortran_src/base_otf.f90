@@ -1316,7 +1316,7 @@ subroutine update_accum_rate()
   ! TODO: here happens the scaling on otf channels
   ! instead of *1. here should be the scaling factor
   ! something like: scaling_factors(i) where i is the nr_of_proc
-  rates_matrix(i,volume+2) = rates_matrix(i,volume+1) * 1.
+  rates_matrix(1,volume+2) = rates_matrix(1,volume+1) * 1.
 
   ! the accum rate is then determined by the scaled channel rate
   accum_rates(1)=rates_matrix(1,volume+2)
@@ -1331,6 +1331,8 @@ subroutine update_accum_rate()
      rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * 1.
      accum_rates(i)=accum_rates(i-1)+rates_matrix(i,volume+2)
   enddo
+
+  print *, accum_rates
 
   ASSERT(accum_rates(nr_of_proc).gt.0.,"base/update_accum_rate found &
     accum_rates(nr_of_proc)=0, so no process is available at all")
