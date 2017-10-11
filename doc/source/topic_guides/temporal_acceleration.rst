@@ -19,9 +19,9 @@ conditions of the reverse process and vice versa.
 See the example model `render_co_oxidation_ruo2_processes_paired.py` from
 the examples folder for an example.
 
-To enable acceleration, compile with the command: `kmos export model.xml -t` 
+To enable acceleration, compile with the command: `kmos export model.xml -t`.
 or if using the backend for lateral interactions: `kmos export model.xml -b 
-lat_int -t`.
+lat_int -t`. Use `kmos export model.xml -b otf -t` for the on the fly backend.
 
 The model has four adjustable parameters (c.f. article):
 
