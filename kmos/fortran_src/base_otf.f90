@@ -2127,6 +2127,10 @@ subroutine determine_procsite(ran_proc, ran_site, proc, site)
   ! once the process is selected, we need to build the corresponding accum rate
   ! this is most likely the CPU criticall part of this backend
   ! optimization work should be conducted here
+  ! TODO: introduce process rate scaling later here
+  ! could be something like:
+  ! if rates_matrix(proc,i) > x:
+  !     accum_rates_proc += scaling_factor * rates_matrix(proc,i)
   accum_rates_proc(1)=rates_matrix(proc,1)
   do i = 2, nr_of_sites(proc)
      accum_rates_proc(i) = accum_rates_proc(i-1) + rates_matrix(proc,i)
