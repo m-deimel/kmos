@@ -1378,7 +1378,7 @@ subroutine update_integ_rate_sb()
 
 
     do i = 1, nr_of_proc
-        integ_rates_sb(i)=integ_rates_sb(i)+nr_of_sites(i)*original_rates(i)*kmc_time_step
+        integ_rates_sb(i)=integ_rates_sb(i)+rates_matrix(i,volume+1)*kmc_time_step
     enddo
 
     ASSERT(accum_rates(nr_of_proc).gt.0.,"base/update_accum_rate found" // &
