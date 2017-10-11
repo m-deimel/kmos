@@ -1308,10 +1308,7 @@ subroutine update_accum_rate()
   do j = 1, nr_of_sites(1)
      rates_matrix(1,volume+1) = rates_matrix(1,volume+1) + rates_matrix(1,j)
   enddo
-  ! TODO: here happens the scaling on otf channels
-  ! instead of *1. here should be the scaling factor
-  ! something like: scaling_factors(i) where i is the nr_of_proc
-  rates_matrix(1,volume+2) = rates_matrix(1,volume+1) * 1.
+  rates_matrix(1,volume+2) = rates_matrix(1,volume+1) * scaling_factors(abs(proc_pair_indices(1)))
 
   ! the accum rate is then determined by the scaled channel rate
   accum_rates(1)=rates_matrix(1,volume+2)
@@ -1322,12 +1319,19 @@ subroutine update_accum_rate()
      do j = 1, nr_of_sites(i)
         rates_matrix(i,volume+1) = rates_matrix(i,volume+1) + rates_matrix(i,j)
      enddo
-     ! TODO: same as above!
-     rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * 1.
+     rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * scaling_factors(abs(proc_pair_indices(i)))
      accum_rates(i)=accum_rates(i-1)+rates_matrix(i,volume+2)
   enddo
 
-  print *, accum_rates
+  ! print *, "----------------- update accum rate"
+  ! print *, "proc pair index", proc_pair_indices(1)
+  ! print *, "process rate", "------ scaled process rate"
+  ! print *, rates_matrix(1, volume+1), rates_matrix(1, volume+2)
+  ! print *, rates_matrix(2, volume+1), rates_matrix(2, volume+2)
+  ! print *, "--"
+  ! print *, "Scaling", scaling_factors
+  ! print *, "Accum rates", accum_rates
+  ! print *, "END----------------- update accum rate"
 
   ASSERT(accum_rates(nr_of_proc).gt.0.,"base/update_accum_rate found &
     accum_rates(nr_of_proc)=0, so no process is available at all")
