@@ -37,7 +37,6 @@ if data.meta.debug > 0:
 
 #@     call update_accum_rate
 #@     call update_clocks(ran_time)
-#@     call update_eq_proc(proc_nr) 
 #@
 #@     call update_integ_rate
 if code_generator == 'local_smart':
@@ -83,7 +82,6 @@ if data.meta.debug > 0:
 #@     save_counter = 0
 #@     counting = .false.
 #@     call get_save_limit(save_limit)
-#@     print *, save_limit
 #@     call reset_saved_execution_data()
 #@
 #@     do i = 1, n
