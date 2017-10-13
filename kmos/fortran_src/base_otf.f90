@@ -1306,12 +1306,12 @@ subroutine update_accum_rate()
   rates_matrix(:, volume+2) = 0
 
   rates_matrix(1, volume+1) = Sum(rates_matrix(1, 1:volume))
-  rates_matrix(1, volume+2) = rates_matrix(1, volume+1) * scaling_factors(abs(proc_pair_inidces(1)))
+  rates_matrix(1, volume+2) = rates_matrix(1, volume+1) * scaling_factors(abs(proc_pair_indices(1)))
   accum_rates(1)=rates_matrix(1,volume+2)
 
   do i = 2, nr_of_proc
      rates_matrix(i, volume+1) = Sum(rates_matrix(i, 1:volume))
-     rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * scaling_factors(abs(proc_pair_inidces(i)))
+     rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * scaling_factors(abs(proc_pair_indices(i)))
      accum_rates(i)=accum_rates(i-1)+rates_matrix(i,volume+2)
   end do
 
