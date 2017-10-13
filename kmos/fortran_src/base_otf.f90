@@ -1299,39 +1299,21 @@ subroutine update_accum_rate()
   !    ``none``
   !******
 
-  integer(kind=iint) :: i, j
+  integer(kind=iint) :: i
 
-  accum_rates(1) = 0.0
-  rates_matrix(1,volume+1) = 0.0
-  rates_matrix(1,volume+2) = 0.0
+  accum_rates(:) = 0
+  rates_matrix(:, volume+1) = 0
+  rates_matrix(:, volume+2) = 0
 
-  do j = 1, nr_of_sites(1)
-     rates_matrix(1,volume+1) = rates_matrix(1,volume+1) + rates_matrix(1,j)
-  enddo
-  rates_matrix(1,volume+2) = rates_matrix(1,volume+1) * scaling_factors(abs(proc_pair_indices(1)))
-
-  ! the accum rate is then determined by the scaled channel rate
+  rates_matrix(1, volume+1) = Sum(rates_matrix(1, 1:volume))
+  rates_matrix(1, volume+2) = rates_matrix(1, volume+1) * scaling_factors(abs(proc_pair_inidces(1)))
   accum_rates(1)=rates_matrix(1,volume+2)
 
   do i = 2, nr_of_proc
-     rates_matrix(i,volume+1) = 0.0
-     rates_matrix(i,volume+2) = 0.0
-     do j = 1, nr_of_sites(i)
-        rates_matrix(i,volume+1) = rates_matrix(i,volume+1) + rates_matrix(i,j)
-     enddo
-     rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * scaling_factors(abs(proc_pair_indices(i)))
+     rates_matrix(i, volume+1) = Sum(rates_matrix(i, 1:volume))
+     rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * scaling_factors(abs(proc_pair_inidces(i)))
      accum_rates(i)=accum_rates(i-1)+rates_matrix(i,volume+2)
-  enddo
-
-  ! print *, "----------------- update accum rate"
-  ! print *, "proc pair index", proc_pair_indices(1)
-  ! print *, "process rate", "------ scaled process rate"
-  ! print *, rates_matrix(1, volume+1), rates_matrix(1, volume+2)
-  ! print *, rates_matrix(2, volume+1), rates_matrix(2, volume+2)
-  ! print *, "--"
-  ! print *, "Scaling", scaling_factors
-  ! print *, "Accum rates", accum_rates
-  ! print *, "END----------------- update accum rate"
+  end do
 
   ASSERT(accum_rates(nr_of_proc).gt.0.,"base/update_accum_rate found &
     accum_rates(nr_of_proc)=0, so no process is available at all")
