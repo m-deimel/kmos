@@ -61,6 +61,7 @@
 	otf_rate CDATA #IMPLIED
         enabled CDATA #IMPLIED
         tof_count CDATA #IMPLIED
+        paired_with CDATA #IMPLIED
       >
       <!ELEMENT condition EMPTY>
       <!ATTLIST condition

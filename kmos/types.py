@@ -497,6 +497,7 @@ class Project(object):
                 process_elem.set('otf_rate', process.otf_rate)
             process_elem.set('name', process.name)
             process_elem.set('enabled', str(process.enabled))
+            process_elem.set('paired_with', str(process.paired_with))
             if process.tof_count:
                 process_elem.set('tof_count', str(process.tof_count))
             for condition in process.condition_list:
@@ -988,11 +989,18 @@ class Project(object):
                                 proc_enabled = True
                         else:
                             proc_enabled = True
+                        if 'paired_with' in process.attrib:
+                            paired_with = process.attrib['paired_with']
+                            if paired_with == 'None':
+                                paired_with = None
+                        else:
+                            paired_with = None
                         process_elem = Process(name=name,
                                                rate_constant=rate_constant,
                                                enabled=proc_enabled,
                                                tof_count=tof_count,
-                                               otf_rate=otf_rate)
+                                               otf_rate=otf_rate,
+                                               paired_with=paired_with)
                         for sub in process:
                             # if sub.tag == 'action' or sub.tag == 'condition':
                             if sub.tag in ['action', 'condition', 'bystander']:
@@ -1910,7 +1918,8 @@ class Process(FixedObject):
                   'bystander_list',
                   'enabled',
                   'chemical_expression',
-                  'tof_count']
+                  'tof_count',
+                  'paired_with']
 
     def __init__(self, **kwargs):
         FixedObject.__init__(self, **kwargs)
@@ -1921,7 +1930,8 @@ class Process(FixedObject):
         self.action_list = kwargs.get('action_list', [])
         self.bystander_list = kwargs.get('bystander_list', [])
         self.tof_count = kwargs.get('tof_count', None)
-        self.enabled = kwargs.get('enabled', True)
+        self.enabled = kwargs.get('enabled', True),
+        self.paired_with = kwargs.get('paired_with', None)
 
     def __repr__(self):
         repr_str = ('[PROCESS] Name:%s\n'
