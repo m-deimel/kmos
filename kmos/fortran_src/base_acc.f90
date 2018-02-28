@@ -1285,28 +1285,25 @@ subroutine update_integ_rate_sb()
   integer(kind=iint) :: i
   integer(kind=iint) :: j
   real(kind=rdouble) :: correction
-  integer(kind=iint) :: relax_steps = 9999999999
+  integer(kind=iint) :: print_rates = 0
 
 
     do i = 1, nr_of_proc
         integ_rates_sb(i)=integ_rates_sb(i)+nr_of_sites(i)*original_rates(i)*kmc_time_step
     enddo
 
-    if ( kmc_step > relax_steps ) then
-       print *, "lul", nr_of_sites(10)
+    if ( print_rates > 0 ) then
        j = nr_of_sites(10) + nr_of_sites(9)
        if (j==0) then
           j = 1
        endif
-       print *, "lul2", j
-
        print *, integ_rates_sb(24)
     endif
 
     correction = (2*j*original_rates(12)) / ((200-j)*original_rates(12) + j*original_rates(10))
     integ_rates_sb(24) = integ_rates_sb(24) + correction*original_rates(24)*kmc_time_step
 
-    if ( kmc_step > relax_steps ) then
+    if ( print_rates > 0 ) then
        print *, integ_rates_sb(24)
 
        print *, "correction", correction
