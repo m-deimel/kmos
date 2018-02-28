@@ -1282,12 +1282,43 @@ subroutine update_integ_rate_sb()
     !    ``none``
     !******
 
-    integer(kind=iint) :: i
+  integer(kind=iint) :: i
+  integer(kind=iint) :: j
+  real(kind=rdouble) :: correction
+  integer(kind=iint) :: relax_steps = 9999999999
 
 
     do i = 1, nr_of_proc
         integ_rates_sb(i)=integ_rates_sb(i)+nr_of_sites(i)*original_rates(i)*kmc_time_step
     enddo
+
+    if ( kmc_step > relax_steps ) then
+       print *, "lul", nr_of_sites(10)
+       j = nr_of_sites(10) + nr_of_sites(9)
+       if (j==0) then
+          j = 1
+       endif
+       print *, "lul2", j
+
+       print *, integ_rates_sb(24)
+    endif
+
+    correction = (2*j*original_rates(12)) / ((200-j)*original_rates(12) + j*original_rates(10))
+    integ_rates_sb(24) = integ_rates_sb(24) + correction*original_rates(24)*kmc_time_step
+
+    if ( kmc_step > relax_steps ) then
+       print *, integ_rates_sb(24)
+
+       print *, "correction", correction
+       print *, "ads", original_rates(10)
+       print *, "des", original_rates(12)
+       print *, "adso2", original_rates(24)
+       print *, "kmc time step", kmc_time_step
+       print *, "integ ads", integ_rates_sb(10)
+       print *, "integ des", integ_rates_sb(12)
+
+    endif
+    ! print *, original_rates(10), original_rates(12), original_rates(24)
 
     ASSERT(accum_rates(nr_of_proc).gt.0.,"base/update_accum_rate found" // &
         "accum_rates(nr_of_proc)=0, so no process is available at all")
