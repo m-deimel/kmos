@@ -2616,6 +2616,9 @@ def set_rate_constants(parameters=None, print_rates=None, can_accelerate=False):
     # update chemical potentials (works for otf backend only)
     if hasattr(proclist,'update_user_parameter'):
          for name,entry in settings.parameters.iteritems():
+             if isinstance(entry['value'], str) and entry['value'].startswith('['):
+                 continue
+
              proclist.update_user_parameter(
                  getattr(proclist,name.lower()),
                  evaluate_rate_expression(
