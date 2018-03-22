@@ -2965,40 +2965,23 @@ class ProcListWriter():
                                           parameter.scale))
         out.write('    }\n\n')
 
-        # In acceleration scheme, sort processes so that they occur pair-wise
-        # To match to processes they have to have the same attribute 'paired_with'
-        # or their actions/conditions have to match pair-wise
-        # If that is not the case, an error will be raised.
+        #In acceleration scheme, sort processes so that they occur pair-wise
+        #This requires that all processes have been defined with actions/
+        #conditions that match pair-wise. If that is not the case, an error 
+        #will be raised.
         if accelerated:
             #write proc_pair_indices
             compare = lambda x, y: collections.Counter(x) == collections.Counter(y)
             assert (len(data.process_list) % 2 == 0), 'the total number of processes must be an even number'
             proc_pair_indices = [0]*len(data.process_list)
-
-            # Manual pairing via 'paired_with' attribute of processes
-            k = 1
-            pairs = {}
-            for proc in filter(lambda x: x.paired_with is not None, data.process_list):
-                if not pairs.has_key(proc.paired_with):
-                    pairs[proc.paired_with] = []
-                pairs[proc.paired_with].append(proc)
-            for key, processes in pairs.iteritems():
-                msg = 'exactly two processes may have the same key! %s has %i processes' % (key, len(processes))
-                assert len(processes) == 2, msg
-                proc_pair_indices[data.process_list.index(processes[0])] = k
-                proc_pair_indices[data.process_list.index(processes[1])] = -k
-                k += 1
-
-            # Automatic pairing via 'process1.conditions == process2.actions' and reverse
-            automatic_processes = filter(lambda x: x.paired_with is None, data.process_list)
-            for n, process1 in enumerate(automatic_processes):
-                for m, process2 in enumerate(automatic_processes):
+            k=1
+            for n,process1 in enumerate(data.process_list):
+                for m,process2 in enumerate(data.process_list):
                     if n < m:
                         if compare(process1.condition_list, process2.action_list) and compare(process2.condition_list, process1.action_list):
-                            proc_pair_indices[data.process_list.index(process1)] = k
-                            proc_pair_indices[data.process_list.index(process2)] = -k
+                            proc_pair_indices[n] = k
+                            proc_pair_indices[m] = -k
                             k += 1
-
             for i, v in enumerate(proc_pair_indices):
                 if not v:
                     print('No reverse reaction match for %s' % data.process_list[i].name)
