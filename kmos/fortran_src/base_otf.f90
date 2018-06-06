@@ -404,8 +404,6 @@ integer(kind=iint) :: save_limit
 !   Used for the temporal acceleration scheme.
 !******
 
-
-
 ! TODO: certainly has to be changed...
 real(kind=rdouble), dimension(:), allocatable :: original_rates
 !****v* base/original_rates
@@ -1301,28 +1299,21 @@ subroutine update_accum_rate()
 
   integer(kind=iint) :: i, j
 
-  accum_rates(1) = 0.0
-  rates_matrix(1,volume+1) = 0.0
-  rates_matrix(1,volume+2) = 0.0
+  if (modulo(kmc_step, 1000).eq. 0) then
+    do i = 1, nr_of_proc
+      rates_matrix(i,volume+1) = 0.0
+      do j = 1, nr_of_sites(i)
+          rates_matrix(i,volume+1) = rates_matrix(i,volume+1) + rates_matrix(i,j)
+      enddo
+    enddo
+  endif
 
-  do j = 1, nr_of_sites(1)
-     rates_matrix(1,volume+1) = rates_matrix(1,volume+1) + rates_matrix(1,j)
-  enddo
   rates_matrix(1,volume+2) = rates_matrix(1,volume+1) * scaling_factors(abs(proc_pair_indices(1)))
-
-  ! the accum rate is then determined by the scaled channel rate
-  accum_rates(1)=rates_matrix(1,volume+2)
-
+  accum_rates(1) = rates_matrix(1,volume+2)
   do i = 2, nr_of_proc
-     rates_matrix(i,volume+1) = 0.0
-     rates_matrix(i,volume+2) = 0.0
-     do j = 1, nr_of_sites(i)
-        rates_matrix(i,volume+1) = rates_matrix(i,volume+1) + rates_matrix(i,j)
-     enddo
      rates_matrix(i, volume+2) = rates_matrix(i, volume+1) * scaling_factors(abs(proc_pair_indices(i)))
      accum_rates(i)=accum_rates(i-1)+rates_matrix(i,volume+2)
   enddo
-
   ! print *, "----------------- update accum rate"
   ! print *, "proc pair index", proc_pair_indices(1)
   ! print *, "process rate", "------ scaled process rate"
