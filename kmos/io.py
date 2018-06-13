@@ -2938,6 +2938,7 @@ class ProcListWriter():
             out.write('threshold_parameter = 0.2\n')
             out.write('sampling_steps = 20\n')
             out.write('execution_steps = 200\n')
+            out.write('executed_rates_limit = 10000\n')
             out.write('save_limit = 1000\n')
         out.write('random_seed = 1\n\n')
 

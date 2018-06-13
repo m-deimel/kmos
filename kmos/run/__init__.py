@@ -154,6 +154,7 @@ class KMC_Model(Process):
                        threshold_parameter=None,
                        sampling_steps=None,
                        execution_steps=None,
+                       executed_rates_limit=None,
                        save_limit=None):
 
         # initialize multiprocessing.Process hooks
@@ -198,6 +199,9 @@ class KMC_Model(Process):
             if execution_steps is not None:
                 settings.execution_steps = execution_steps
                 print 'execution_steps set to: ',settings.execution_steps
+            if executed_rates_limit is not None:
+                settings.executed_rates_limit = executed_rates_limit
+                print 'executed_rates_limit set to: ',settings.executed_rates_limit
             if save_limit is not None:
                 settings.save_limit = save_limit
                 print 'save_limit set to: ',settings.save_limit
@@ -269,6 +273,7 @@ class KMC_Model(Process):
                     self.settings.buffer_parameter,
                     self.settings.threshold_parameter,
                     self.settings.execution_steps,
+                    self.settings.executed_rates_limit,
                     self.settings.save_limit,
                     not self.banner)
             else:
@@ -287,6 +292,7 @@ class KMC_Model(Process):
                     self.settings.buffer_parameter,
                     self.settings.threshold_parameter,
                     self.settings.execution_steps,
+                    self.settings.executed_rates_limit,
                     self.settings.save_limit,
                     not self.banner)
             else:
@@ -552,12 +558,28 @@ class KMC_Model(Process):
         self.deallocate()
         self.reset()
 
+    def set_executed_rates_limit(self, value=10000):
+        """
+        Sets the width of the executed_rates matrix.
+        (Default: 10000)
+        :type value: int > 1
+        """
+        self.settings.executed_rates_limit = value
+        self.deallocate()
+        self.reset()
+
     def get_execution_steps(self):
         """
         :return value: See set function.
         """
         assert (self.can_accelerate), 'This model has not been compiled using the acceleration flag -t'
         return self.base.get_execution_steps()
+
+    def get_executed_rates_limit(self):
+        """
+        :return value: See set function.
+        """
+        return self.base.get_executed_rates_limit()
 
     def set_save_limit(self, value=1000):
         """

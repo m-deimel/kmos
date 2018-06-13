@@ -296,7 +296,7 @@ else:
 # and calculate the rate constants for the first time
 model_name_line = ('This kMC Model \'%s\' was written by' % data.meta.model_name).ljust(59)
 author_name_line = ('%s (%s)' % (data.meta.author, data.meta.email)).center(60)
-#@ subroutine init(input_system_size, system_name, layer, seed_in, buffer_parameter, threshold_parameter, execution_steps, save_limit, no_banner)
+#@ subroutine init(input_system_size, system_name, layer, seed_in, buffer_parameter, threshold_parameter, execution_steps, executed_rates_limit, save_limit, no_banner)
 #@
 #@ !****f* proclist/init
 #@ ! FUNCTION
@@ -311,10 +311,11 @@ author_name_line = ('%s (%s)' % (data.meta.author, data.meta.email)).center(60)
 #@ !    * ``buffer_parameter`` used for temporal acc. scheme.
 #@ !    * ``threshold_parameter`` used for temporal acc. scheme.
 #@ !    * ``execution_steps`` used for temporal acc. scheme.
+#@ !    * ``executed_rates_limit`` used for configuration distribution analysis.
 #@ !    * ``save_limit`` used for temporal acc. scheme.
 #@ !    * ``no_banner`` [optional] if True no copyright is issued.
 #@ !******
-#@     integer(kind=iint), intent(in) :: layer, seed_in, execution_steps, save_limit
+#@     integer(kind=iint), intent(in) :: layer, seed_in, execution_steps, executed_rates_limit, save_limit
 #@     real(kind=rdouble), intent(in) :: threshold_parameter, buffer_parameter
 #@     integer(kind=iint), dimension({data.meta.model_dimension}), intent(in) :: input_system_size
 #@
@@ -359,7 +360,7 @@ if data.meta.debug > 0:
     #@ print *,"    PROCLIST/INIT/SYSTEM_SIZE",input_system_size
 if len(data.layer_list) > 1 :
     #@     call set_null_species(null_species)
-#@     call allocate_system(nr_of_proc, input_system_size, system_name, buffer_parameter, threshold_parameter, execution_steps, save_limit)
+#@     call allocate_system(nr_of_proc, input_system_size, system_name, buffer_parameter, threshold_parameter, execution_steps, executed_rates_limit, save_limit)
 if data.meta.debug > 0:
     #@ print *,"    PROCLIST/INIT/ALLOCATED_LATTICE"
 #@     call initialize_state(layer, seed_in)

@@ -150,7 +150,7 @@ elif data.meta.model_dimension == 1:
 #@
 #@ end function calculate_nr2lattice
 #@
-#@ subroutine allocate_system(nr_of_proc, input_system_size, system_name, buffer_parameter, threshold_parameter, execution_steps, save_limit)
+#@ subroutine allocate_system(nr_of_proc, input_system_size, system_name, buffer_parameter, threshold_parameter, execution_steps, executed_rates_limit, save_limit)
 #@
 #@ !****f* lattice/allocate_system
 #@ ! FUNCTION
@@ -161,7 +161,7 @@ elif data.meta.model_dimension == 1:
 #@ !
 #@ !    ``none``
 #@ !******
-#@     integer(kind=iint), intent(in) :: nr_of_proc, execution_steps, save_limit
+#@     integer(kind=iint), intent(in) :: nr_of_proc, execution_steps, executed_rates_limit, save_limit
 #@     real(kind=rdouble), intent(in) :: threshold_parameter, buffer_parameter
 #@     integer(kind=iint), dimension({data.meta.model_dimension}), intent(in) :: input_system_size
 #@     character(len=200), intent(in) :: system_name
@@ -231,7 +231,7 @@ if data.meta.debug > 1:
 #@
 if data.meta.debug > 1:
     #@     print *, "    LATTICE/ALLOCATE_SYSTEM/FILLED_LOOKUP"
-#@     call base_allocate_system(nr_of_proc, volume, system_name, buffer_parameter, threshold_parameter, execution_steps, save_limit)
+#@     call base_allocate_system(nr_of_proc, volume, system_name, buffer_parameter, threshold_parameter, execution_steps, executed_rates_limit, save_limit)
 #@
 cell_00 = data.layer_list.cell[0, 0]
 cell_01 = data.layer_list.cell[0, 1]

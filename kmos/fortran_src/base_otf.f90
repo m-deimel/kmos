@@ -88,6 +88,7 @@ public :: add_proc, &
   set_threshold_parameter, &
   get_threshold_parameter, &
   get_execution_steps, &
+  get_executed_rates_limit, &
   get_scaling_factor, &
   update_accum_rate, &
   update_integ_rate, &
@@ -369,6 +370,11 @@ integer(kind=iint) :: execution_steps
 !****v* base/execution_steps
 ! FUNCTION
 !   Used for the temporal acceleration scheme.
+!******
+integer(kind=iint) :: executed_rates_limit
+!****v* base/execution_steps
+! FUNCTION
+!   used for configuration distribution analysis
 !******
 real(kind=rdouble) :: threshold_parameter
 !****v* base/threshold_parameter
@@ -1109,7 +1115,7 @@ subroutine reload_system(input_system_name, reloaded)
     endif
 
 
-    call allocate_system(nr_of_proc, volume, system_name, buffer_parameter, threshold_parameter, execution_steps, save_limit)
+    call allocate_system(nr_of_proc, volume, system_name, buffer_parameter, threshold_parameter, execution_steps, executed_rates_limit, save_limit)
 
     ! Second loop: parse the "meat" of data
     rewind(filehandler)
@@ -1385,7 +1391,7 @@ subroutine update_integ_rate_sb()
 
 end subroutine update_integ_rate_sb
 
-subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, input_buffer_parameter, input_threshold_parameter, input_execution_steps, input_save_limit)
+subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, input_buffer_parameter, input_threshold_parameter, input_execution_steps, input_executed_rates_limit, input_save_limit)
   !****f* base/allocate_system
   ! FUNCTION
   !   Allocates all book-keeping structures and stores
@@ -1398,11 +1404,12 @@ subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, in
   !    * ``buffer_parameter`` used for temporal acc. scheme.
   !    * ``threshold_parameter`` used for temporal acc. scheme.
   !    * ``execution_steps`` used for temporal acc. scheme.
+  !    * ``execution_steps`` used for configuration distribution analysis
   !    * ``save_limit`` used for temporal acc. scheme.
   !******
   !---------------I/O variables---------------
   character(len=200), intent(in) :: input_system_name
-  integer(kind=iint), intent(in) :: input_volume, input_nr_of_proc, input_execution_steps, input_save_limit
+  integer(kind=iint), intent(in) :: input_volume, input_nr_of_proc, input_execution_steps, input_executed_rates_limit, input_save_limit
   real(kind=rdouble), intent(in) :: input_threshold_parameter, input_buffer_parameter
   logical :: system_allocated
 
@@ -1430,6 +1437,11 @@ subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, in
      print *,"kmos/base/allocate_system: execution_steps cannot be smaller than 1"
      stop
   endif
+  if(input_executed_rates_limit.lt.1)then
+     print *,"kmos/base/allocate_system: executed_rates_limit cannot be smaller than 1"
+     stop
+  endif
+
   if(input_threshold_parameter.lt.0)then
      print *,"kmos/base/allocate_system: threshold_parameter cannot be smaller than 0"
      stop
@@ -1556,6 +1568,7 @@ subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, in
     buffer_parameter = input_buffer_parameter
     threshold_parameter = input_threshold_parameter
     execution_steps = input_execution_steps
+    executed_rates_limit = input_executed_rates_limit
     save_limit = input_save_limit
 
     ! Set clocks and step counter to 0
@@ -2442,6 +2455,13 @@ subroutine get_execution_steps(output_execution_steps)
     output_execution_steps = execution_steps
 
 end subroutine get_execution_steps
+
+subroutine get_executed_rates_limit(output_executed_rates_limit)
+  integer(kind=iint), intent(out) :: output_executed_rates_limit
+
+  output_executed_rates_limit = executed_rates_limit
+
+end subroutine get_executed_rates_limit
 
 subroutine get_save_limit(output_save_limit)
     integer(kind=iint), intent(out) :: output_save_limit
