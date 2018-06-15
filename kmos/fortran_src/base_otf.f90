@@ -74,6 +74,7 @@ public :: add_proc, &
   reset_site, &
   reaccumulate_rates_matrix, &
   save_system, &
+  save_executed_rate, &
   set_rate_const, &
   set_null_species, &
   set_debug_level, &
@@ -89,6 +90,7 @@ public :: add_proc, &
   get_threshold_parameter, &
   get_execution_steps, &
   get_executed_rates_limit, &
+  get_executed_rates, &
   get_scaling_factor, &
   update_accum_rate, &
   update_integ_rate, &
@@ -335,6 +337,16 @@ integer(kind=ibyte), dimension(:,:), allocatable :: proc_pair_exec
 !   corresponding number of forward (reverse) executions in 
 !   procstat_eq.
 !******
+real(kind=rdouble), dimension(:,:), allocatable :: executed_rates
+!****v* base/executed_rates
+! FUNCTION
+!   The height of this array is the number of total processes
+!   while the width is determined by the variable executed_rates_limit.
+!   After every process execution, the rate of the same process, is stored
+!   in executed rates in the row for the given process.
+!   The column is determined by procstat(proc) % executed_rates_limit, which
+!   means, that this is in principle a circular list for every process.
+!******
 integer(kind=iint), dimension(:), allocatable :: pointers_exec
 !****v* base/pointers_exec
 ! FUNCTION
@@ -423,6 +435,31 @@ real(kind=rdouble), dimension(:), allocatable :: original_rates
 !****************
 contains
 !****************
+
+subroutine save_executed_rate(proc, proc_rate)
+  !****f* base/save_executed_rate
+  ! FUNCTION
+  !    saves the rates for the last executed process in the executed_rates matrix
+  ! ARGUMENTS
+  !
+  !    * ``proc`` positive integer that states the process that has just been
+  !    executed
+  !    * ``proc_rate`` positive real that states the rate of the process that has just
+  !    been executed
+  !******
+  integer(kind=iint), intent(in) :: proc
+  real(kind=rdouble), intent(in) :: proc_rate
+  integer(kind=iint) :: pointer_index
+
+  ! Make sure proc_nr is in the right range
+  ASSERT(proc.gt.0,"update_eq_proc: proc has to be positive")
+  ASSERT(proc.le.nr_of_proc,"update_eq_proc: proc has to be less or equal nr_of_proc.")
+
+  ! finds the next position to store the executed rate in
+  pointer_index = modulo(procstat(proc), executed_rates_limit) + 1
+
+  executed_rates(proc, pointer_index) = proc_rate
+end subroutine save_executed_rate
 
 subroutine update_eq_proc(proc)
     !****f* base/update_eq_proc
@@ -1542,6 +1579,10 @@ subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, in
      print *,"kmos/base/allocate_system: Tried to allocate proc_pair_exec twice, please deallocate first"
      system_allocated = .true.
   endif
+  if(allocated(executed_rates))then
+     print *,"kmos/base/allocate_system: Tried to allocate executed_rates twice, please deallocate first"
+     system_allocated = .true.
+  endif
   if(allocated(pointers_exec))then
      print *,"kmos/base/allocate_system: Tried to allocate pointers_exec twice, please deallocate first"
      system_allocated = .true.
@@ -1653,6 +1694,9 @@ subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, in
 
     allocate(proc_pair_exec(nr_of_proc/2,execution_steps))
     proc_pair_exec = 0
+
+    allocate(executed_rates(nr_of_proc, executed_rates_limit))
+    executed_rates = 0
 
     allocate(pointers_exec(nr_of_proc/2))
     pointers_exec = 1
@@ -1798,6 +1842,11 @@ subroutine deallocate_system()
      deallocate(proc_pair_exec)
   else
      print *,"Warning: proc_pair_exec was not allocated, tried to deallocate."
+  endif
+  if(allocated(executed_rates))then
+     deallocate(executed_rates)
+  else
+     print *,"Warning: executed_rates was not allocated, tried to deallocate."
   endif
   if(allocated(pointers_exec))then
      deallocate(pointers_exec)
@@ -2027,6 +2076,8 @@ subroutine get_rate(proc_nr, site_nr, return_rate)
   ! in case of non-presence
   real(kind=rdouble), intent(out) :: return_rate
 
+  print *,"PROCLIST/DO_ACC_KMC_STEPS/PROC_RATE", rates_matrix(proc_nr, site_nr)
+  
   if(site_nr.ne.-1)then
     return_rate=rates_matrix(proc_nr, site_nr)
   else
@@ -2034,7 +2085,6 @@ subroutine get_rate(proc_nr, site_nr, return_rate)
   endif
 
 end subroutine get_rate
-
 
 subroutine increment_procstat(proc)
   !****f* base/increment_procstat
@@ -2159,6 +2209,8 @@ subroutine determine_procsite(ran_proc, ran_site, proc, site)
   call interval_search_real(accum_rates_proc(1:nr_of_sites(proc)),ran_site*accum_rates_proc(nr_of_sites(proc)),site)
 
   ! print *, "BASE/DETERMINE_PROCSITE/Found memory_address ", site ! DEBUG
+
+  call save_executed_rate(proc,rates_matrix(proc,site))
 
   site = avail_sites(proc,site,1)
 
@@ -2483,8 +2535,14 @@ subroutine get_ave_scaling_factor(pair_index,output_ave_scaling_factor)
     real(kind=rdouble), intent(out) :: output_ave_scaling_factor
 
     output_ave_scaling_factor = sum_sf(pair_index) / kmc_step
-
 end subroutine get_ave_scaling_factor
+
+subroutine get_executed_rates(proc_nr,col_nr,output_rate)
+  integer(kind=iint), intent(in) :: proc_nr, col_nr
+  real(kind=rdouble), intent(out) :: output_rate
+
+  output_rate = executed_rates(proc_nr, col_nr)
+end subroutine get_executed_rates
 
 subroutine get_last_set_scaling_factor(pair_index,output_last_set_scaling_factor)
     integer(kind=iint), intent(in) :: pair_index

@@ -656,6 +656,18 @@ class KMC_Model(Process):
                         pair_names.append([f_name,r_name])
         return pair_names, ave_sf, last_sf
 
+    def get_executed_rates(self, proc_nr):
+        """ Returns the row of executed_rates according to proc_nr """
+        col_limit = self.get_executed_rates_limit()
+        rates = np.zeros((col_limit, ))
+        for i in xrange(col_limit):
+            rates[i] = self.base.get_executed_rates(proc_nr, i+1)
+            # if this element is zero, we can break the loop, since we know, that
+            # all following elements will be zero, too
+            if not rates[i]:
+                break
+        return rates
+
     def print_proc_pair_eq(self):
         """Prints the names of the forward and reverse process in each pair
         along with a logical for the pair that is True if the process pair 
