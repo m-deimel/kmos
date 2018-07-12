@@ -260,6 +260,9 @@ class KMC_Model(Process):
 
     def reset(self):
         self.size = np.array(self.size)
+        #Needed for system allocation of base.groups_forward\reverse called in proclist.init(...)
+        self.base.initialize_max_group_length(settings.max_group_length)
+        self.base.initialize_nb_of_groups(settings.nb_of_groups)
         try:
             if self.can_accelerate:
                 proclist.init(self.size,
@@ -347,10 +350,8 @@ class KMC_Model(Process):
                     self.lattice_representation = lattice_representation[0]
         else:
             self.lattice_representation = Atoms()
-
         set_rate_constants(settings.parameters, self.print_rates, self.can_accelerate)
-
-        self.base.update_accum_rate()
+        
         # S. matera 09/25/2012
         if hasattr(self.base, 'update_integ_rate'):
             self.base.update_integ_rate()
@@ -377,7 +378,19 @@ class KMC_Model(Process):
                 if ppi > 0:
                     is_diff = diff[n]
                     self.base.initialize_pair_is_eq(ppi,is_diff)
-
+                    
+            #initialize base.groups_forward and reverse and is_in_group for
+            #equilibriation in acceleration algorithm
+            for proc, group in enumerate(settings.is_in_group):
+                self.base.initialize_is_in_group(proc+1, group)
+            for group_nb, group in enumerate(settings.groups_forward[1:]):   #Throw away group zero (array indexing in fortran starts at one)
+                for index, proc in enumerate(group):
+                    self.base.initialize_groups_forward(group_nb+1, index+1, proc)
+            for group_nb, group in enumerate(settings.groups_reverse[1:]):   #Throw away group zero (array indexing in fortran starts at one)
+                for index, proc in enumerate(group):
+                    self.base.initialize_groups_reverse(group_nb+1, index+1, proc)
+            
+            self.base.update_accum_rate()
         # # for otf backend only
         # print('kmos.run : Updating proclist_pars!')
         # if hasattr(self.proclist,'recalculate_rates_matrix'):

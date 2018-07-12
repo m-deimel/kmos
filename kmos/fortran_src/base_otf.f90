@@ -83,6 +83,11 @@ public :: add_proc, &
   set_original_rate_const, &
   initialize_proc_pair_index, &
   initialize_reverse_index, &
+  initialize_is_in_group, &
+  initialize_groups_forward, &
+  initialize_groups_reverse, &
+  initialize_nb_of_groups, &
+  initialize_max_group_length, &
   set_buffer_parameter, &
   get_buffer_parameter, &
   set_threshold_parameter, &
@@ -131,7 +136,7 @@ integer(kind=iint), dimension(:,:,:), allocatable, public :: avail_sites
 !     and filled in from the left but in whatever order they come
 !     or (2) the location where the site is stored in (1).
 !
-!******
+!*****
 integer(kind=iint), dimension(:), allocatable :: lattice
 !****v* base/lattice
 ! FUNCTION
@@ -236,6 +241,19 @@ integer(kind=iint) :: nr_of_proc
 ! FUNCTION
 !   Total number of available processes.
 !******
+
+integer(kind=iint):: nb_of_groups
+!****v* base/nb_of_groups
+! FUNCTION
+!   number of groups
+!******
+
+integer(kind=iint):: max_group_length
+!****v* base/max_group_length
+! FUNCTION
+!   number of process pairs in the biggest group
+!******
+
 integer(kind=iint) :: volume
 !****v* base/volume
 ! FUNCTION
@@ -248,6 +266,32 @@ character(len=200) :: system_name
 !   This name should not contain any characters that you don't want to
 !   have in a filename either, i.e. only [A-Za-z0-9\_-].
 !******
+
+integer(kind=iint), dimension(:), allocatable :: is_in_group
+!****v* base/is_in_group
+! FUNCTION
+!   Stores the group number for each process, Namely is_in_group(proc_index)
+!   returns the group number or 0 if it doesn't belong to any group.
+!******
+
+integer(kind=iint), dimension(:,:), allocatable :: groups_forward
+!****v* base/proc_pair_indices
+! FUNCTION
+!   Stores the indices of all forward processes for all groups. The row indices 
+!   correspond tp the group number. It is used in update_eq to find out which 
+!   processes to iterate over in the case where the input proc is a forward proc.
+!   (see groups_reverse for the reverse case)
+!******
+
+integer(kind=iint), dimension(:,:), allocatable :: groups_reverse
+!****v* base/proc_pair_indices
+! FUNCTION
+!   Stores the indices of all forward processes for all groups. The row indices
+!   correspond tp the group number. It is used in update_eq to find out which
+!   processes to iterate over in the case where the input proc is a reverse proc.
+!   (see groups_reverse for the forward case)
+!******
+
 
 ! **** NEW: TODO: fix formating
 integer(kind=iint), dimension(:), allocatable :: proc_pair_indices
@@ -418,7 +462,7 @@ real(kind=rdouble), dimension(:), allocatable :: original_rates
 contains
 !****************
 
-subroutine update_eq_proc(proc)
+subroutine update_eq_proc(proc_in)
     !****f* base/update_eq_proc
     ! FUNCTION
     !    update_eq_proc updates the book-keeping regarding which reaction pairs
@@ -426,17 +470,60 @@ subroutine update_eq_proc(proc)
     !
     ! ARGUMENTS
     !
-    !    * ``proc`` positive integer that states the process that has just been
+    !    * ``proc_in`` positive integer that states the process that has just been
     !    executed
     !******
-    integer(kind=iint), intent(in) :: proc
-    integer(kind=iint) :: pair_index, r_proc, pointer_index
+    integer(kind=iint), intent(in) :: proc_in
+    integer(kind=iint) :: pair_index, r_proc, pointer_index, group_size, size_adjust, group_nb, proc, i, j
+    integer, dimension(max_group_length) :: same_direction_procs_in_group
     logical :: forward_proc
-
     ! Make sure proc_nr is in the right range
     ASSERT(proc.gt.0,"update_eq_proc: proc has to be positive")
     ASSERT(proc.le.nr_of_proc,"update_eq_proc: proc has to be less or equal nr_of_proc.")
+    
+    group_nb = is_in_group(proc_in)
+    group_size = max_group_length
+    
+    if (proc_pair_indices(proc_in).gt.0) then
+        forward_proc = .true.
+    else
+        forward_proc = .false.
+    endif
 
+    if (group_nb .ne. -1)then
+        if (forward_proc) then
+            same_direction_procs_in_group = groups_forward(group_nb,:)
+            size_adjust=0
+            do i = 1,group_size
+            if (groups_forward(group_nb,i) .ne. -1) then
+                size_adjust = i
+            endif
+            enddo
+            group_size = size_adjust
+
+        else
+            same_direction_procs_in_group = groups_reverse(group_nb,:)
+            size_adjust=0
+            do j = 1,group_size
+            if (groups_reverse(group_nb,j) .ne. -1) then
+                size_adjust = j
+            endif
+            enddo
+            group_size = size_adjust
+        endif
+    !Case where proc_in isn't in a group
+    else
+        group_size = 1
+    endif   
+
+    do i = 1,group_size
+    !Case where proc_in isn't in a group
+    if (group_size == 1) then
+        proc = proc_in
+    !proc_in is in a group, we iterate over this group to update all these processes
+    else
+        proc = same_direction_procs_in_group(i)
+    endif
     !get index of process pair
     pair_index = abs(proc_pair_indices(proc))
 
@@ -444,17 +531,12 @@ subroutine update_eq_proc(proc)
     if (is_diff_proc(proc) .eqv. .false.) then
         !Add 1 to process executions for proc in procstat_eq
         procstat_eq(proc) = procstat_eq(proc) + 1
-
         !get index of of reverse process
         r_proc = reverse_indices(proc)
 
         !determine if proc is a forward process.
         !Note that forward processes per definition have positive indices in proc_pair_indices.
-        if (proc_pair_indices(proc).gt.0) then
-            forward_proc = .true.
-        else
-            forward_proc = .false.
-        endif
+
 
         !get the element that is currently pointed to in pointers_exec
         pointer_index = pointers_exec(pair_index)
@@ -544,7 +626,8 @@ subroutine update_eq_proc(proc)
             pair_is_eq(pair_index) = .false.
         endif
     endif
-
+    
+    
     ! *** This part to be done for every process ***
     !Add 1 to process executions in local superbasin for proc pair.
     proc_pair_exec_sb(pair_index) = proc_pair_exec_sb(pair_index) + 1
@@ -570,6 +653,7 @@ subroutine update_eq_proc(proc)
         print *,"BASE/UPDATE_EQ_PROC/PAIR_IS_EQ(PAIR_INDEX):", pair_is_eq(pair_index)
         print *,"BASE/UPDATE_EQ_PROC/PAIR_IS_LOC_EQ(PAIR_INDEX):", pair_is_loc_eq(pair_index)
     endif
+    enddo
 end subroutine update_eq_proc
 
 
@@ -768,6 +852,99 @@ subroutine initialize_pair_is_eq(ppi,is_diff)
 
     pair_is_eq(ppi) = is_diff
 end subroutine initialize_pair_is_eq
+
+subroutine initialize_nb_of_groups(number_of_groups)
+    !****f* base/initialize_nb_of_groups
+    ! FUNCTION
+    !    initialize_nb_of_groups sets the constant value 'number_of_groups' which is used to 
+    !    allocate certain arrays in the acceleration algorithm 
+    !
+    ! ARGUMENTS
+    !
+    !    * ``group`` positive integer that states the group
+    !    * ``proc`` positive integer that states the index of the process to add to the group
+    !******
+    integer(kind=iint), intent(in) :: number_of_groups
+
+    nb_of_groups = number_of_groups
+end subroutine initialize_nb_of_groups
+
+subroutine initialize_max_group_length(length)
+    !****f* base/initialize_max_group_length
+    ! FUNCTION
+    !    set the constant 'max_group_length' used to allocate certain array of the acceleration scheme
+    !
+    ! ARGUMENTS
+    !
+    !    * ``group`` positive integer that states the group
+    !    * ``proc`` positive integer that states the index of the process to add to the group
+    !******
+    integer(kind=iint), intent(in) :: length
+
+    max_group_length = length
+end subroutine initialize_max_group_length
+
+subroutine initialize_is_in_group(proc, group)
+    !****f* base/initialize_is_in_group
+    ! FUNCTION
+    !    initialize_is_in_group sets a group for each process in the is_in_group array
+    !    where the index in the array corresponds to the process index and the value 
+    !    corresponds to the group.
+    !
+    ! ARGUMENTS
+    !
+    !    * ``group`` positive integer that states the group
+    !    * ``proc`` positive integer that states the index of the process to add to the group
+    !******
+    integer(kind=iint), intent(in) :: proc
+    integer(kind=iint), intent(in) :: group
+
+    is_in_group(proc) = group
+end subroutine initialize_is_in_group
+
+
+
+subroutine initialize_groups_forward(group, ind, proc)
+    !****f* base/initialize_groups_forward
+    ! FUNCTION
+    !    initialize_groups_forward sets all forward proc indices of each
+    !    group in groups_forward. Where -1 is a placeholder correspondind 
+    !    to no process at all, but necessary for the array to have a regular shape
+    !    It is called for every process every time a model is reset.
+    !
+    ! ARGUMENTS
+    !
+    !    * ``group`` positive integer that states the index of the group. (the row in which to add proc)
+    !    * ``proc`` positive integer that states the index of the forward process to add to the group
+    !    * ``index`` positive integer that states the colum in which to add proc
+    !******
+    integer(kind=iint), intent(in) :: group
+    integer(kind=iint), intent(in) :: ind
+    integer(kind=iint), intent(in) :: proc
+
+    groups_forward(group,ind) = proc
+end subroutine initialize_groups_forward
+
+subroutine initialize_groups_reverse(group, ind, proc)
+    !****f* base/initialize_groups_reverse
+    ! FUNCTION
+    !    initialize_groups_reverse sets all reverse proc indices of each
+    !    group in groups_forward. Where -1 is a placeholder correspondind
+    !    to no process at all, but necessary for the array to have a regular shape
+    !    It is called for every process every time a model is reset.
+    !
+    ! ARGUMENTS
+    !
+    !    * ``group`` positive integer that states the index of the group. (the row in which to add proc)
+    !    * ``proc`` positive integer that states the index of the reverse process to add to the group
+    !    * ``index`` positive integer that states the colum in which to add proc
+    !******
+    integer(kind=iint), intent(in) :: group
+    integer(kind=iint), intent(in) :: ind
+    integer(kind=iint), intent(in) :: proc
+
+    groups_reverse(group,ind) = proc
+end subroutine initialize_groups_reverse
 
 subroutine save_execution(proc, save_counter)
     !****f* base/save_execution
@@ -1569,6 +1746,18 @@ subroutine allocate_system(input_nr_of_proc, input_volume, input_system_name, in
     avail_sites = 0
     ! print *, "BASE/ALLOCATE_SYSTEM : Allocated avail_sites"
 
+    allocate(is_in_group(nr_of_proc))
+    is_in_group = 0
+    !print *, "BASE/ALLOCATE_SYSTEM : Allocated is_in_group"
+
+    allocate(groups_forward(nb_of_groups, max_group_length))
+    groups_forward = 0
+    !print *, "BASE/ALLOCATE_SYSTEM : Allocated groups_forward"
+
+    allocate(groups_reverse(nb_of_groups, max_group_length))
+    groups_reverse = 0
+    !print *, "BASE/ALLOCATE_SYSTEM : Allocated groups_reverse"
+
     allocate(lattice(volume))
     lattice = null_species
     ! print *, "BASE/ALLOCATE_SYSTEM : Allocated lattice"
@@ -1765,6 +1954,21 @@ subroutine deallocate_system()
      deallocate(pair_is_loc_eq)
   else
      print *,"Warning: pair_is_loc_eq was not allocated, tried to deallocate."
+  endif
+   if(allocated(groups_reverse))then
+     deallocate(groups_reverse)
+  else
+     print *,"Warning: groups_reverse was not allocated, tried to deallocate."
+  endif
+  if(allocated(groups_forward))then
+     deallocate(groups_forward)
+  else
+     print *,"Warning: groups_forward was not allocated, tried to deallocate."
+  endif
+  if(allocated(is_in_group))then
+     deallocate(is_in_group)
+  else
+     print *,"Warning: is_in_groups was not allocated, tried to deallocate."
   endif
   if(allocated(scaling_factors))then
      deallocate(scaling_factors)

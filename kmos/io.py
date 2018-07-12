@@ -2974,19 +2974,82 @@ class ProcListWriter():
             compare = lambda x, y: collections.Counter(x) == collections.Counter(y)
             assert (len(data.process_list) % 2 == 0), 'the total number of processes must be an even number'
             proc_pair_indices = [0]*len(data.process_list)
+            
+            #find the highest group number and create is_in_group array needed in base/update_eq_proc subroutine
+            nb_of_groups=0
+            is_in_group = []
+            for proc in data.process_list:
+                if proc.group == '0':
+                    is_in_group.append(-1)
+                else:
+                    is_in_group.append(int(proc.group))
+                if int(proc.group) > nb_of_groups:
+                    nb_of_groups = int(proc.group)
+
+
+            # Initialise array to keep track of already grouped processes while pairing/grouping and use it to return
+            # a list of processes for each group and their shared proc_pair_index
+            groups = [0]*(nb_of_groups+1)     # Start couting from group zero
+            for i in xrange(len(groups)):
+                groups[i] = [0]*len(data.process_list)
+            
             k=1
             for n,process1 in enumerate(data.process_list):
                 for m,process2 in enumerate(data.process_list):
                     if n < m:
+                        # Make sure process groups aren't equal to zero and make sure they're equal to one another
                         if compare(process1.condition_list, process2.action_list) and compare(process2.condition_list, process1.action_list):
                             proc_pair_indices[n] = k
                             proc_pair_indices[m] = -k
                             k += 1
+                            if int(process1.group) and int(process2.group) and process1.group == process2.group:
+                                group_nb = int(process1.group)
+                                if not any(groups[group_nb]):   # No process pair has been matched to this group yet
+                                    groups[group_nb][n] = 1
+                                    groups[group_nb][m] = -1
+                                else:   # which means there's at leat one pair of this group already matched
+                                    group_index = [i for i, e in enumerate(groups[group_nb]) if e != 0]
+                                    pair_indices = groups[group_nb][group_index[0]]     # Take index of first matched element
+                                    groups[group_nb][n] = 1
+                                    groups[group_nb][m] = -1
+
+            # Groups_forward(reverse) hold all forward(reverse) processes of each group
+            groups_forward = []
+            groups_reverse = []
+            for group_nb in xrange(len(groups)):
+                forward_procs = [i+1 for i,v in enumerate(groups[group_nb]) if v > 0]
+                reverse_procs = [i+1 for i,v in enumerate(groups[group_nb]) if v < 0]
+                groups_forward.append(forward_procs)
+                groups_reverse.append(reverse_procs)
+                
+            # Now reshape the groups forward and reverse arrays to have a matrix-like regular shape
+            if len(max(groups_forward,key=len)) != len(max(groups_reverse,key=len)):
+                raise ValueError("In some group(s) the number of forward processes doesn't match the number of backwards processes")
+
+            max_group_length = len(max(groups_forward,key=len))
+            
+            for i , group in enumerate(groups_forward):
+                if len(group) < max_group_length:
+                    groups_forward[i].extend([-1]*(max_group_length-len(group)))
+            for i , group in enumerate(groups_reverse):
+                if len(group) < max_group_length:
+                    groups_reverse[i].extend([-1]*(max_group_length-len(group)))
+
             for i, v in enumerate(proc_pair_indices):
                 if not v:
                     print('No reverse reaction match for %s' % data.process_list[i].name)
             assert (k - 1 == len(data.process_list)/2), 'not all processes could be paired'
-            out.write('proc_pair_indices = %s\n' %proc_pair_indices)
+            out.write('proc_pair_indices = %s\n' % proc_pair_indices)
+            out.write('\n')
+            out.write('is_in_group = %s\n' % is_in_group)
+            out.write('\n')
+            out.write('groups_forward = %s\n' % groups_forward)
+            out.write('\n')
+            out.write('groups_reverse = %s\n' % groups_reverse)
+            out.write('\n')
+            out.write('max_group_length = %s\n' % max_group_length)
+            out.write('\n')
+            out.write('nb_of_groups = %s\n' % nb_of_groups)
             out.write('\n')
             #write is_diff_proc
             is_diff_proc = []

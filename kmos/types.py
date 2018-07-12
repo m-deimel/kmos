@@ -497,6 +497,8 @@ class Project(object):
                 process_elem.set('otf_rate', process.otf_rate)
             process_elem.set('name', process.name)
             process_elem.set('enabled', str(process.enabled))
+            if hasattr(process, 'group'):
+                process_elem.set('group', str(process.group))
             if process.tof_count:
                 process_elem.set('tof_count', str(process.tof_count))
             for condition in process.condition_list:
@@ -555,7 +557,7 @@ class Project(object):
                 fullform_map[long_name] = short_name
 
                 process.name = short_name
-
+    
         with open('abbreviations_{self.meta.model_name}.dat'.format(**locals()), 'w') as outfile:
             outfile.write(pprint.pformat(stub_map))
 
@@ -980,6 +982,12 @@ class Project(object):
                             otf_rate = process.attrib['otf_rate']
                         else:
                             otf_rate = None
+                        if 'group' in process.attrib:
+                            group = process.attrib['group']
+                        else:
+                            #Processes that don't have a group go in group minus one
+                            group = '-1'
+
                         if 'enabled' in process.attrib:
                             try:
                                 proc_enabled = bool(
@@ -992,7 +1000,8 @@ class Project(object):
                                                rate_constant=rate_constant,
                                                enabled=proc_enabled,
                                                tof_count=tof_count,
-                                               otf_rate=otf_rate)
+                                               otf_rate=otf_rate,
+                                               group=group)
                         for sub in process:
                             # if sub.tag == 'action' or sub.tag == 'condition':
                             if sub.tag in ['action', 'condition', 'bystander']:
@@ -1910,7 +1919,8 @@ class Process(FixedObject):
                   'bystander_list',
                   'enabled',
                   'chemical_expression',
-                  'tof_count']
+                  'tof_count',
+                  'group']
 
     def __init__(self, **kwargs):
         FixedObject.__init__(self, **kwargs)
@@ -1921,6 +1931,7 @@ class Process(FixedObject):
         self.action_list = kwargs.get('action_list', [])
         self.bystander_list = kwargs.get('bystander_list', [])
         self.tof_count = kwargs.get('tof_count', None)
+        self.group = kwargs.get('group', '0')
         self.enabled = kwargs.get('enabled', True)
 
     def __repr__(self):

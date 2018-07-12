@@ -57,10 +57,11 @@
     <!ELEMENT process (condition|action|bystander)*>
       <!ATTLIST process
         name CDATA #REQUIRED
-	rate_constant CDATA #REQUIRED
-	otf_rate CDATA #IMPLIED
+	    rate_constant CDATA #REQUIRED
+	    otf_rate CDATA #IMPLIED
         enabled CDATA #IMPLIED
         tof_count CDATA #IMPLIED
+	    group CDATA #IMPLIED
       >
       <!ELEMENT condition EMPTY>
       <!ATTLIST condition
